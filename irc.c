@@ -1,55 +1,25 @@
-struct _IRC_User_Modes {
-	char *text;
-	signed char i, s, w, o;
-}
+#include "irc.h"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
-struct _IRC_User {
-	char *nick;
-	char *name;
-	char *host;
-	char *full;
-	IRC_Channel_Modes mode;
-};
-
-struct _IRC_Channel_Modes {
-	char *text;
-	signed char o, s, p, n, m, i, t, l, b, v, k;
-}
-
-struct _IRC_Channel {
-	char *chan_name;
-	IRC_User *users [];
-	IRC_Connection *conn;
-	IRC_Channel_Modes mode;
-};
-
-struct _IRC_Connection {
-	char *channels_avail [];
-	IRC_Channel channels [];
-
-	int sockfd;
-	char *domain;
-	unsigned short port;
-	struct addrinfo *addrinfo;
-
-	IRC_User me;
-	
-	struct {
-		unsigned short id;
-		const char *msg;
-	} ecodes [20];
-	
-	const char *motd;
-};
-
-#define	FMT_VA(msg)	\
+#define	FMT_VA \
 	char msg [512];	\
 	va_list ap;	\
 	va_start (ap, fmt);	\
 	vsnprintf (msg, 512, fmt, ap);	\
-	va_end (ap, fmt);
+	va_end (ap);
 
-void sendmsg (IRC_Connection *conn, const char *msg) {
+void sendmesg (IRC_Connection *conn, const char *msg) {
 	size_t len = strlen (msg);
 	int sent = 0;
 	int packet;
@@ -62,7 +32,7 @@ void sendmsg (IRC_Connection *conn, const char *msg) {
 	} while (sent < len);
 	
 	// send the \r\n
-	const char *rn = { '\r', '\n' };
+	const char rn [] = { '\r', '\n' };
 	len = 2;
 	sent = 0;
 	do {
@@ -73,22 +43,27 @@ void sendmsg (IRC_Connection *conn, const char *msg) {
 	} while (sent < len);
 }
 
-void sendfmtmsg (IRC_Connection *conn, const char *fmt, ...)
-	{	FMT_VA (msg);	sendmsg (conn, msg);	}
+void sendfmtmesg (IRC_Connection *conn, const char *fmt, ...)
+	{	FMT_VA;	sendmesg (conn, msg);	}
 
 void IRC_Send (IRC_Channel *chan, const char *msg)
-	{	sendfmtmsg (chan, "PRIVMSG %s :%s", chan -> chan_name, msg);	}
+	{	IRC_SendToCh (chan -> conn, chan -> chan_name, msg);	}
 void IRC_SendF (IRC_Channel *chan, const char *fmt, ...)
-	{	FMT_VA (msg);	IRC_Send (chan, msg);	}
+	{	FMT_VA;	IRC_Send (chan, msg);	}
 
-void IRC_SendCmd (IRC_Channel *conn, const char *cmdline)
-	{	sendmsg (conn, cmdline);	}
-void IRC_SendCmdF (IRC_Channel *conn, const char *fmt, ...)
-	{	FMT_VA (msg);	sendmsg (conn, msg);	}
+void IRC_SendToCh (IRC_Connection *conn, const char *chan, const char *msg)
+	{	sendfmtmesg (conn, "PRIVMSG %s :%s", chan, msg);	}
+void IRC_SendToChF (IRC_Connection *conn, const char *chan, const char *fmt, ...)
+	{	FMT_VA;	IRC_SendToCh (conn, chan, msg);	}
+
+void IRC_SendCmd (IRC_Connection *conn, const char *cmdline)
+	{	sendmesg (conn, cmdline);	}
+void IRC_SendCmdF (IRC_Connection *conn, const char *fmt, ...)
+	{	FMT_VA;	sendmesg (conn, msg);	}
 
 void IRC_JoinChannel (IRC_Channel *chan)
 	{	IRC_SendCmdF (chan -> conn, "JOIN %s", chan -> chan_name);	}
-void IRC_JoinChannelByName (IRC_Connection *conn, const char *chan)
+void /*IRC_Channel **/IRC_JoinChannelByName (IRC_Connection *conn, const char *chan)
 	{	IRC_SendCmdF (conn, "JOIN %s", chan);	}
 
 IRC_Connection *IRC_AllocConnection (const char *domain, unsigned int port) {
@@ -108,10 +83,12 @@ IRC_Connection *IRC_AllocConnection (const char *domain, unsigned int port) {
 }
 
 IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
+	//puts ("bees");
 	if (conn -> addrinfo == NULL) {
 		if (getaddrinfo (conn -> domain, NULL, NULL, &conn -> addrinfo))
 			return NULL;
 	}
+	//puts ("bees2");
 	
 	if (conn -> sockfd == -1) {
 		conn -> sockfd = socket (conn -> addrinfo -> ai_family, conn -> addrinfo -> ai_socktype, conn -> addrinfo -> ai_protocol);
@@ -119,17 +96,20 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 		if (conn -> sockfd == -1)
 			return NULL;
 		
-		if (fcntl (sockfd, F_SETFL, O_NONBLOCK))
+		if (fcntl (conn -> sockfd, F_SETFL, O_NONBLOCK))
 			return NULL;
 		
-		((struct sockaddr_in*) conn -> addrinfo -> ai_addr) -> sin_prt = htons (port);
+		((struct sockaddr_in*) conn -> addrinfo -> ai_addr) -> sin_port = htons (conn -> port);
 		
 		bool cont = false;
 		do {
 			connect (conn -> sockfd, conn -> addrinfo -> ai_addr, conn -> addrinfo -> ai_addrlen);
 			switch (errno) {
-				case EINPROGRESS: case EALREADY:
+				case EINPROGRESS:
 					cont = true;
+				break;
+				case EALREADY:
+					cont = false;
 				break;
 				default:
 					return NULL;
@@ -137,12 +117,13 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 			}
 		} while (cont);
 	}
+	//puts ("bees3");
 	
 	return conn;
 }
 
 IRC_Connection *IRC_SetupConnection (IRC_Connection *conn, const char *name) {
-	sendfmtmsg (conn, "USER %s %s %s %s", name, name, domain, name);
+	sendfmtmesg (conn, "USER %s %s %s %s", name, name, conn -> domain, name);
 	return conn;
 }
 
@@ -153,5 +134,12 @@ IRC_Connection *IRC_NewConnection (IRC_Connection *conn, const char *domain, uns
 	if (IRC_OpenConnection (conn) == NULL)
 		return NULL;
 	
+	//puts ("bees4");
 	IRC_SetupConnection (conn, name);
+	//puts ("bees5");
+	return conn;
+}
+
+void IRC_SetNick (IRC_Connection *conn, const char *nick) {
+	sendfmtmesg (conn, "NICK %s", nick);
 }
