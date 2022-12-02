@@ -12,6 +12,51 @@ struct Command _KB_C_CList [] {
 		"replies \"pong\"",
 		kitping
 	},
+	{	"insult",
+		"insults you.",
+		"replies with a random insult",
+		kitinsult
+	},
+	{	"join",
+		"joins an IRC channel",
+		"joins a channel. channels are presented in the format #<channel>[@<server>]. if no server is provided, it is assumed that the server is the one that has sent the command. based on configuration options, this command might only be sent by channel ops.",
+		kitjoin
+	},
+	{	"sql",
+		"execute raw sql queries",
+		"executes a raw sql query to a sqlite3 database",
+		kitsql
+	},
+	{	"connect",
+		"connect to irc server",
+		"connects to an irc server, provided as the rest of the command. based on configuration options, this command might only be sent by channel ops.",
+		kitconnect
+	},
+	{	"leave",
+		"leaves an irc channel",
+		"leaves the irc channel supplied. channels are in the format #<channel>[@<server>]. if no server is provided, it is assumed that the server is the one that has sent the command. based on configuration options, this command might only be sent by channel ops."
+		kitleave
+	},
+	{	"die",
+		"disconnects from an irc server",
+		"disconnects from the irc server supplied. if no server is specified, it leaves the server that has sent the command. based on configuration options, this command might only be sent by channel ops.",
+		kitdie
+	},
+	{	"say",
+		"says something",
+		"says whatever follows the command",
+		kitsay
+	},
+	{	"asdf",
+		KB_Keymash (),
+		KB_Keymash (),
+		kitasdf
+	}
+	{	"help",
+		"prints a help message",
+		"prints a list of commands, if no argument is supplied. if an argument is supplied, it prints a more detailed explanation on the command given. the prefix included in the command is optional.",
+		kithelp
+	},
 	NULL
 };
 
@@ -48,8 +93,8 @@ struct {
 		"haha BYE",
 		"see yall in HELL",
 		"bye",
-		"*disappears into nothingness*",
-		"*vanishes into thin air*",
+	//	"*disappears into nothingness*",
+	//	"*vanishes into thin air*",
 		KB_KeymashFmt ("my final word: %s"),
 		KB_Keymash ()
 	);
@@ -68,6 +113,16 @@ struct {
 		#endif
 		KB_KeymashFmt ("there was an error: %s")
 	);
+	MESSAGELIST (InsufficientPerms,
+		"haha loser, you think you can make me do that?",
+		"im not going to listen to you",
+		"why should i",
+		"come back when you have actual authority",
+		"no.",
+		"i dont wanna",
+		"shut up",
+		KB_Keymash ()
+	);
 	MESSAGELIST (Insult,
 		"shut the fuck up",
 		"you want me to insult you, huh. i guess i should, since your ego is so high.",
@@ -76,15 +131,16 @@ struct {
 		"every word that you utter makes me lose faith in humanity just a little bit more",
 		"shut up parentless dumbass",
 		"your intellect is off the charts! negatively, i mean.",
-		"shut up julian",
+	//	"shut up julian",
 		"shup up rust user",
-		"ok kit",
+	//	"ok kit",
 		"why dont you shut up before you make a fool of yourself, okay?",
 		"why",
 		"ive got a ton of insults i could use against you, but i dont know which one to pick..."
 		"youre so lonely that im almost inclined to feel sorry for you, but then i remember how much of a loser you are",
 		"your face is a face ive been avoiding for seven years; if i have to see it again, ill break down for sure",	// thx cyan
 		"leave me alone, please",
+		"you are like a beer keg except youre full of useless questions instead of beer",
 		KB_KeymashFmt ("\"%s\" -- what i hear whenever you talk"),
 		
 		#ifndef NO_INSULTING_INSULTS
@@ -130,6 +186,10 @@ CLEANUP {}
 
 COMMAND (kitping) {
 	IRC_Send (chan, "kitpong");
+}
+
+COMMAND (kitasdf) {
+	IRC_Send (chan, KB_Keymash ());
 }
 
 COMMAND (kitjoin) {

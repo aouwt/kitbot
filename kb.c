@@ -41,3 +41,10 @@ char *KB_KeymashFmt (const char *fmt) {
 	free (mash);
 	return out;
 }
+
+char *KB_RandMessage (const char **msgs) {
+	size_t i;
+	for (i = 0; msgs [i] != NULL; i ++);
+	
+	return msgs [(size_t) rand () * ((float) i / (float) RAND_MAX)];
+}
