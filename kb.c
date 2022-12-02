@@ -6,31 +6,24 @@
 
 char *KB_Keymash (void) {
 	const char samples [] =
-		"jfkdahfkudjhafkjdhlkfjdlkagdfhjkahfkljdhklfdshaklfjhdlkjfhadkslfhilfdiajfd"
-		"hklkfhjakflhklajfhkdljahfkjdhkfldhgfdashjenaiusfhjershkresnuifcesriugfhner"
-		"siukgvnuisefhniesukhfnuaweijfnciuakfhdijkaflhrkaljfhkfjfhiurahrfjkjfhierua"
-		"hyfiurktgnawnclkansjlzhilufhaliutfrslgiuhndjhgneisruldhfuisjlnvjsahsnutila"
-		"fjsnduikljfascnzuilkjgomirshnguifkajmiocljanigulkariflcjdnsuilkhnvlkajjrfi"
-		"odjasnlfhnailkfnmcoidlzjfnuiakjnflkcdjangfhlranljkfhnclsdihgunifahjngrkanf"
-		"uilhtuilndazfjnaluthfiutmfiouesjnfjklhsuilhfurjslgniofdhsgjklndljfosijgihr"
-		"iualgfnrlsufdhgsdjklcnzfuiksrhflihjaiouruueoiarujjdkzhflkashafjkhdlahtfrui"
-		"lhvnlkdshfniulahkgfnviuakshfuilakkfjdkjhcukalshfailukthiudlkthfieuldahnuil"
-		"fhiualthfurilafhljaghuilaeyfhiliytahfpsufijkdusghfauldkhfuilkiagilauhefdla"
-		"isughilaitujflaighfiltfjailetujfiuagdrkflrugshlraigugpafslihjfilasdhijtfla"
-		"isuhfniauslkhwppeuifjiadlsluirfuiarlsehflicusahtiegulfshgliauvkdsnviuakwfo"
-		"jdieufhlskcujdfhudkhfalihiufjkdkiucajguiflaehgikeshgnesrukgniesukgniesugvn"
-		"ukjghslifuhnjelahfiurkljgluihslihalihgsvklhrtkguhesrildfgkljdsfghfsulghniu"
-		"jkgnjfsdkgnlituksghnilrukgnrifushvniugkjshtiugfhsuigkjhgsluikshgliefrsifdh"
-		"suigkhilgukhsviluekhfuikgjhnuiskjvniukshtguirkjhsguifrjkshgivulkjhsgniuels"
-		"khfruifhiluiuej8oitufjitukgfhskuhgjlusilhyguishguieslhotiarhuiefyiurrhfdsj"
-		"fhkdcnskjdlvjhdsbvuilskjfhrklshnvbsjfhljsbfjklshfjkmkhfijiohjfnoiershnurhd"
-		"sghlvishgnnurisjkgnvuilkjshvniuksjgniukjrghiulskgjrhlsdghnruisjghiulskhgli"
-		"urshtliuhkgnliusthgsiurkjhgiukdjghiurskghviusghgukjhguorsikhgisukjrghisulg"
-		"hniulghsuigklrhigukhdfilughtiogfshiugfshgnuesrilhgfuilhsgfuirhiutlrfhdutil"
-		"gkfhiurfkhoighoigtkurtiosupwiturifhsupwuriewpeufrjslhfsufilhtuirhsguirlhis"
-		"turilgvuifslgniusfjsiorfhigofsuifsiujoiehjfnsuirlfujiurfhyiutfhjtisorfhtiu"
-		"fhgifuktsofltufistehfiuyfhiuwerujoiweryhuirjsfhkufhsiuetyghrsilehgurisygui"
-		"srhfuiresityhesruyhfuiejshfuiesrlghisrl"
+		"fkdasjgfdklajfoiajeglkdgjmeriaojfkmglkjfalkjfdlfjisadkgjeriosdfjkjgerm"
+		"kdskjgfklsjfdlisjgkeriodsljklfksjfklahfauikhfniaukhiufahfdjksafnkldajh"
+		"ciukshfncjkdhncukjshidulafhiuehfnvjdkcnjdkafhiudjkafiueldsjafhkljadhkj"
+		"lfhdalhfdfafhalkhjadlfhjdsklahfiuahcdjnfajkhkafjldashflhdujafhweudsijk"
+		"njfkdhafkljdhjakfhdjkalfhdjkalhfjkdlhalkfdjahfuilrhgfdfjghjkfghfjkgkla"
+		"ghfkjzhgfgkhfjkhgajdasfhksdfljghhdfhdfhkfgfvhaagahuaifaegdhgudhgshgeig"
+		"jsdkfkdhsgfjdksghkjhflkjhgksjdhfkjshlgfhjsklghfjkshgkjshgkjlahlkfhsjsg"
+		"fsdlgkjdsklhgfkslhgjklhsjkfhklasfhjklfjlfjfkjlhjdklhsgfhgklhgkfjhkshjk"
+		"ghsgkjhdkufjxdfhusgjkfhnsuijdkghufjkdfhfiujksdhfnivjkdhvudsfjkhjklhdfj"
+		"lkhvnkjvkxkkjdfhssghlkdsfjhfkljgdsfhklfjsgslihghiltghegaeriaererdfdjgf"
+		"kdslhgfuihngskfjnsgijvkfsgniufjkgnkjlgskjlhgfhlsgkjflghfjksghjfksghjkh"
+		"jkfdnjkdhfjljasifjiskdfkjkdsfhvjkdslghfiukdhjfhsglfjsgksjkghiufkjdgkls"
+		"huilgesriudfijfklhgsfuighifudlshkgfjsdhgiushglfjkhkgjldfhiudhguidfjkls"
+		"hgvukljsdghiuvfksghjdfjkvhlksjdfghilsukhiufdkjngkjldhfskjflhglsdfhdfkl"
+		"sguitlruifjdsgjlkjfhlskhgdjsfnksjnfjvknfvkjdnfkdsjfkdshgeuisdfjkhgjkdf"
+		"snfjklshefdjkgshkvjldfhnjkldhgedsuihkglsdhgjkfljahgfdjkdlhdfjklshfjklg"
+		"hfsjkghlskhfgjkhsjkhfsjkdlhfjkslghsfjklhgjkhsgkighurjdkgnjklfdsnvjkfdh"
+		"ngksjhgkljlkshgdufjkgvhdjkvnsfjkghksdjflgfhkxmcnxj"
 	;
 	const size_t len = sizeof (samples) / sizeof (*samples);
 	
@@ -47,9 +40,4 @@ char *KB_KeymashFmt (const char *fmt) {
 	sprintf (out, fmt, mash);
 	free (mash);
 	return out;
-}
-
-void main (void) {
-	srand (time (NULL));
-	puts (KB_Keymash ());
 }

@@ -137,12 +137,9 @@ COMMAND (kitjoin) {
 	KB_GetArg (msg, join_ch);
 	IRC_Channel *newch;
 	
-	if (IRC_JoinChannelByName (chan -> conn, join_ch, &newch)) {
-		IRC_Send (chan, "you moron, thats not a channel");
-	} else {
-		IRC_Send (chan, KB_RandMessage (Messages.Confirmation));
-		IRC_Send (&newch, KB_RandMessage (Messages.Confirmation));
-	}
+	IRC_JoinChannelByName (chan -> conn, join_ch, &newch);
+	IRC_Send (chan, KB_RandMessage (Messages.Confirmation));
+	IRC_Send (&newch, KB_RandMessage (Messages.Confirmation));
 }
 
 COMMAND (kitinsult) {
