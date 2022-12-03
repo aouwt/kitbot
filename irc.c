@@ -19,21 +19,50 @@
 	vsnprintf (msg, 512, fmt, ap);	\
 	va_end (ap);
 
-void recvmesg (IRC_Connection *conn) {
+void IRC_Poll (IRC_Connection *conn) {
 	ssize_t r = 0;
 	while ((
 		r = recv (
 			conn->sockfd,
-			conn->buf->bufend,
-			conn->buf->alloc - conn->buf->bufend - conn->buf->buf,
+			conn->buf.bufend,
+			(sizeof (char) * conn->buf.alloc) - (size_t) (conn->buf.bufend - conn->buf.buf),
 			0
 		)
 	) > 0) {
-		conn->buf->bufend += r;
-		if (conn->buf->bufend == (conn->buf->alloc + conn->buf->buf)) {
-			conn->buf->buf = realloc (conn->buf->buf, (conn->buf->alloc))
+		conn->buf.bufend += r;
+		if (conn->buf.bufend == (conn->buf.alloc + conn->buf.buf)) {
+			conn->buf.buf = realloc (conn->buf.buf, (conn->buf.alloc *= 2));
 		}
 	}
+	
+	*conn->buf.bufend = '\0';
+	if (conn->buf.buf [0] != '\0')
+		printf (">%s\n", conn->buf.buf);
+}
+
+IRC_Command *IRC_GetCommand (IRC_Connection *conn) {
+	char *needle;
+	if ((needle = strstr (conn->buf.buf, "\r\n")) == NULL)
+		return NULL;
+	
+	*needle = '\0';
+	
+	IRC_Command *out = malloc (sizeof (IRC_Command));
+	out->argc = 0;
+	
+	out->argv [out->argc ++] = conn->buf.buf;
+	for (char *i = conn->buf.buf; *i != '\n'; i ++) {
+		if (*i == ' ') {
+			out->argv [out->argc ++] = i + 1;
+			*i = '\0';
+		
+		} else
+		if (*i == ':') {
+			out->argv [out->argc ++] = i + 1;
+			break;
+		}
+	}
+	
 }
 
 void sendmesg (IRC_Connection *conn, const char *msg) {
@@ -41,7 +70,7 @@ void sendmesg (IRC_Connection *conn, const char *msg) {
 	int sent = 0;
 	int packet;
 	
-	recvmesg (conn);
+	IRC_Poll (conn);
 	
 	do {
 		packet = send (conn->sockfd, msg + sent, len - sent, 0);
@@ -109,9 +138,9 @@ IRC_Connection *IRC_AllocConnection (const char *domain, unsigned int port) {
 	out->port = port;
 	out->addrinfo = NULL;
 	out->motd = NULL;
-	out->buf->buf = malloc (16 * sizeof (char));
-	out->buf->bufend = out->buf->buf;
-	out->buf->alloc = 16 * sizeof (char);
+	out->buf.buf = malloc (16 * sizeof (char));
+	out->buf.bufend = out->buf.buf;
+	out->buf.alloc = 16 * sizeof (char);
 	
 	return out;
 }
