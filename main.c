@@ -5,16 +5,18 @@
 
 
 void main (void) {
-	IRC_Connection *conn = IRC_NewConnection (NULL, "irc.osmarks.net", 6697, "kitbot");
+	IRC_Connection *conn = IRC_NewConnection (NULL, "irc.osmarks.net", 0, "kitbot");
 	if (conn == NULL)
 		puts (KB_Keymash ());
 	
-	//IRC_SetNick (conn, "kitbot");
+	IRC_SetNick (conn, "kitbot");
 
-	//IRC_JoinChannelByName (conn, "a");
+	IRC_JoinChannelByName (conn, "#b");
 	
-	//IRC_SendToCh (conn, "#a", "test");
-	
-	while (1)
-		IRC_Poll (conn);
+	IRC_SendToCh (conn, "#b", "test");
+	static IRC_Message msg;
+	while (1) {
+		if (IRC_GetMessage (conn, &msg) != NULL)
+			printf ("<%s> %s\n", msg.from.nick, msg.msg);
+	}
 }

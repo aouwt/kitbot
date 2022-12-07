@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #define	FMT_VA \
 	char msg [512];	\
@@ -20,54 +21,88 @@
 	va_end (ap);
 
 void IRC_Poll (IRC_Connection *conn) {
-	ssize_t r = 0;
-	while ((
-		r = recv (
+	size_t oldbufsz = conn->buf.bufend - conn->buf.buf;
+	
+	while (1) {
+		size_t cursz = conn->buf.bufend - conn->buf.buf;
+		if (conn->buf.bufend + 16 >= (conn->buf.alloc + conn->buf.buf)) {
+			conn->buf.buf = realloc (conn->buf.buf, (conn->buf.alloc *= 2));
+			conn->buf.bufend = conn->buf.buf + cursz;
+			
+		}
+		
+		ssize_t r = read (
 			conn->sockfd,
 			conn->buf.bufend,
-			(sizeof (char) * conn->buf.alloc) - (size_t) (conn->buf.bufend - conn->buf.buf),
-			0
-		)
-	) > 0) {
-		conn->buf.bufend += r;
-		if (conn->buf.bufend == (conn->buf.alloc + conn->buf.buf)) {
-			conn->buf.buf = realloc (conn->buf.buf, (conn->buf.alloc *= 2));
-		}
+			(sizeof (char) * (conn->buf.alloc - cursz)) - 2
+		);
+		
+		if (r > 0)
+			conn->buf.bufend += r;
+		else
+			break;
 	}
 	
 	*conn->buf.bufend = '\0';
-	if (conn->buf.buf [0] != '\0')
-		printf (">%s\n", conn->buf.buf);
+	if (conn->buf.bufend != oldbufsz + conn->buf.buf)
+		printf (">%s", conn->buf.buf + oldbufsz);
 }
 
-IRC_Command *IRC_GetCommand (IRC_Connection *conn) {
+IRC_Command *IRC_GetCommand (IRC_Connection *conn, IRC_Command *out) {
+	IRC_Poll (conn);
 	char *needle;
+	
 	if ((needle = strstr (conn->buf.buf, "\r\n")) == NULL)
 		return NULL;
 	
 	*needle = '\0';
 	
-	IRC_Command *out = malloc (sizeof (IRC_Command));
+	out->from = conn;
 	out->argc = 0;
 	
 	out->argv [out->argc ++] = conn->buf.buf;
 	for (char *i = conn->buf.buf; *i != '\n'; i ++) {
 		if (*i == ' ') {
-			out->argv [out->argc ++] = i + 1;
+			out->argv [out->argc] = i + 1;
 			*i = '\0';
-		
-		} else
-		if (*i == ':') {
-			out->argv [out->argc ++] = i + 1;
-			break;
+			
+			if (*(i + 1) == ':') {
+				*(out->argv [out->argc] ++) = '\0';
+				break;
+			}
+			out->argc ++;
 		}
 	}
 	
+	if (strcmp (out->argv [0], "PING") == 0)
+		IRC_SendCmdF (conn, "PONG :%s", out->argv [1] + 1);
+	
+	return out;
+}
+
+IRC_Message *IRC_GetMessage (IRC_Connection *conn, IRC_Message *out) {
+	IRC_Command cmd;
+	if (IRC_GetCommand (conn, &cmd) == NULL)
+		return NULL;
+	return IRC_GetPRIVMSG (&cmd, out);
+}
+
+IRC_Message *IRC_GetPRIVMSG (IRC_Command *cmd, IRC_Message *out) {
+	if (strcmp (cmd->argv [1], "PRIVMSG") != 0)
+		return NULL;
+	
+	strncpy (out->from.nick, cmd->argv [0], cmd->argv [0] - strchr (cmd->argv [0], '!'));
+	strcpy (out->from.full, cmd->argv [0]);
+	
+	strcpy (out->ch.chan_name, cmd->argv [2]);
+	out->ch.conn = cmd->from;
+	
+	strcpy (out->msg, cmd->argv [3]);
 }
 
 void sendmesg (IRC_Connection *conn, const char *msg) {
 	size_t len = strlen (msg);
-	int sent = 0;
+	size_t sent = 0;
 	int packet;
 	
 	IRC_Poll (conn);
@@ -131,30 +166,31 @@ IRC_Connection *IRC_AllocConnection (const char *domain, unsigned int port) {
 	if (port == 0)
 		port = 6667;
 	
-	out->channels_avail = NULL;
-	out->channels = NULL;
 	out->sockfd = -1;
 	out->domain = strdup (domain);
 	out->port = port;
-	out->addrinfo = NULL;
-	out->motd = NULL;
 	out->buf.buf = malloc (16 * sizeof (char));
 	out->buf.bufend = out->buf.buf;
-	out->buf.alloc = 16 * sizeof (char);
+	out->buf.alloc = 16;
 	
 	return out;
 }
 
+void IRC_FreeConnection (IRC_Connection *conn) {
+	free (conn->buf.buf);
+	free (conn);
+}
+
 IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 	//puts ("bees");
-	if (conn->addrinfo == NULL) {
-		if (getaddrinfo (conn->domain, NULL, NULL, &conn->addrinfo))
-			return NULL;
-	}
+	struct addrinfo *ai;
+	if (getaddrinfo (conn->domain, NULL, NULL, &ai))
+		return NULL;
+		
 	//puts ("bees2");
 	
 	if (conn->sockfd == -1) {
-		conn->sockfd = socket (conn->addrinfo->ai_family, conn->addrinfo->ai_socktype, conn->addrinfo->ai_protocol);
+		conn->sockfd = socket (ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 		
 		if (conn->sockfd == -1)
 			return NULL;
@@ -162,11 +198,11 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 		if (fcntl (conn->sockfd, F_SETFL, O_NONBLOCK))
 			return NULL;
 		
-		((struct sockaddr_in*) conn->addrinfo->ai_addr)->sin_port = htons (conn->port);
+		((struct sockaddr_in*) ai->ai_addr)->sin_port = htons (conn->port);
 		
 		bool cont = false;
 		do {
-			connect (conn->sockfd, conn->addrinfo->ai_addr, conn->addrinfo->ai_addrlen);
+			connect (conn->sockfd, ai->ai_addr, ai->ai_addrlen);
 			switch (errno) {
 				case EINPROGRESS:
 					cont = true;
@@ -182,7 +218,13 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 	}
 	//puts ("bees3");
 	
+	freeaddrinfo (ai);
+	
 	return conn;
+}
+
+void IRC_CloseConnection (IRC_Connection *conn) {
+	close (conn->sockfd);
 }
 
 IRC_Connection *IRC_SetupConnection (IRC_Connection *conn, const char *name) {
@@ -205,4 +247,9 @@ IRC_Connection *IRC_NewConnection (IRC_Connection *conn, const char *domain, uns
 
 void IRC_SetNick (IRC_Connection *conn, const char *nick) {
 	sendfmtmesg (conn, "NICK %s", nick);
+}
+
+void IRC_EndConnection (IRC_Connection *conn) {
+	IRC_CloseConnection (conn);
+	IRC_FreeConnection (conn);
 }

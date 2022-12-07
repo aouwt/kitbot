@@ -1,10 +1,10 @@
 #ifndef IRC_H
 	#define IRC_H
 	
-	#include <sys/types.h>
-
-	struct _IRC_User_Modes;
-	struct _IRC_Channel_Modes;
+	#include <stddef.h>
+	
+	struct _IRC_UserModes;
+	struct _IRC_ChannelModes;
 	struct _IRC_User;
 	struct _IRC_Channel;
 	struct _IRC_Connection;
@@ -14,50 +14,47 @@
 		struct _IRC_Connection *from;
 		unsigned int argc;
 		char *argv [16];
+		char *msg [510];
 	} IRC_Command;
 
-	typedef struct _IRC_User_Modes {
-		char *text;
+	typedef struct _IRC_UserModes {
+		char text [5];
 		signed char i, s, w, o;
-	} IRC_User_Modes;
+	} IRC_UserModes;
 
-	typedef struct _IRC_Channel_Modes {
-		char *text;
+	typedef struct _IRC_ChannelModes {
+		char text [12];
 		signed char o, s, p, n, m, i, t, l, b, v, k;
-	} IRC_Channel_Modes;
+	} IRC_ChannelModes;
 
 	typedef struct _IRC_User {
-		char *nick;
-		char *name;
-		char *host;
-		char *full;
-		struct _IRC_User_Modes mode;
+		char nick [16];
+		char full [128];
+		//struct _IRC_User_Modes mode;
 	} IRC_User;
 
 	typedef struct _IRC_Channel {
-		char *chan_name;
-		struct _IRC_User **users;
+		char chan_name [16];
+		//struct _IRC_User **users;
 		struct _IRC_Connection *conn;
-		struct _IRC_Channel_Modes mode;
+		//struct _IRC_ChannelModes mode;
 	} IRC_Channel;
 
+	typedef struct _IRC_Message {
+		char msg [500];
+		struct _IRC_User from;
+		struct _IRC_Channel ch;
+	} IRC_Message;
+	
 	typedef struct _IRC_Connection {
-		char **channels_avail;
-		IRC_Channel *channels;
-
 		int sockfd;
 		char *domain;
 		unsigned short port;
-		struct addrinfo *addrinfo;
+		//struct addrinfo *addrinfo;
 
 		IRC_User me;
 		
-		struct {
-			unsigned short id;
-			const char *msg;
-		} ecodes [20];
-		
-		const char *motd;
+		//const char *motd;
 		
 		struct {
 			size_t alloc;
@@ -81,6 +78,10 @@
 
 	extern void IRC_JoinChannel	(IRC_Channel *chan);	// Join channel
 	extern void IRC_JoinChannelByName	(IRC_Connection *conn, const char *chan);	// Join channel by name
+	
+	extern IRC_Command *IRC_GetCommand (IRC_Connection *conn, IRC_Command *out);
+	extern IRC_Message *IRC_GetMessage (IRC_Connection *conn, IRC_Message *out);
+	extern IRC_Message *IRC_GetPRIVMSG (IRC_Command *cmd, IRC_Message *out);
 
 	extern IRC_Connection *IRC_AllocConnection	(const char *domain, unsigned int port); // allocates IRC_Connection
 	extern IRC_Connection *IRC_OpenConnection	(IRC_Connection *conn);	// establishes a connection to the IRC server

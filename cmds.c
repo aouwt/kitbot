@@ -2,7 +2,7 @@ struct Command {
 	const char *name;
 	const char *desc;
 	const char *help;
-	void (*run) (const char *msg, const char *fullmessage, IRC_Channel *chan);
+	void (*run) (const char *msg, IRC_Message *text);
 };
 
 
@@ -60,7 +60,7 @@ struct Command _KB_C_CList [] {
 	NULL
 };
 
-#define COMMAND(name)	void name (const char *msg, const char *fullmessage, IRC_Channel *chan)
+#define COMMAND(name)	void name (const char *msg, IRC_Message *text)
 #define INIT	void _KB_C_Init (void)
 #define CLEANUP	void _KB_C_Cleanup (void)
 
@@ -185,7 +185,7 @@ CLEANUP {}
 
 
 COMMAND (kitping) {
-	IRC_Send (chan, "kitpong");
+	IRC_Send (msg->chan, "kitpong");
 }
 
 COMMAND (kitasdf) {
