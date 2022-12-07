@@ -40,6 +40,31 @@ const struct the_unit {
 	{ 0, NULL }
 };
 
+struct the_source {
+	char firstchar;
+	const char *fmat;
+	const char *url;
+};
+
+static const struct the_source the_source_google = {
+	'<',
+	"div id=\"result-stats\">About %m[0-9,] results",
+	"https://www.google.com/search?q=\"%s\""
+};
+
+static const struct the_source the_source_wikipedia = {
+	'{',
+	"\"totalhits\":%m[0-9],",
+	"https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srwhat=text&srsearch=\"%s\""
+};
+
+static const struct the_source the_source_bing = {
+	 '<',
+	 "span class=\"sb_count%*[^>]>About %m[0-9,] results",
+	 "https://www.bing.com/search?q=\"%s\""
+};
+
+struct the_source the_currentsource;
 
 thecnt_t the_atothecnt_ignore (const char *str) {
 	thecnt_t out = 0;
@@ -57,7 +82,7 @@ thecnt_t the_getcnt (const char *term) {
 	curl_easy_setopt (curl, CURLOPT_WRITEDATA, f);
 	
 	static char tmp [512];
-	snprintf (tmp, sizeof (tmp) / sizeof (tmp [0]), "https://www.google.com/search?q=\"%s\"", term);
+	snprintf (tmp, sizeof (tmp) / sizeof (tmp [0]), the_currentsource.url, term);
 	curl_easy_setopt (curl, CURLOPT_URL, tmp);
 	
 	if (curl_easy_perform (curl))
@@ -68,9 +93,9 @@ thecnt_t the_getcnt (const char *term) {
 		int c = fgetc (f);
 		if (c == EOF)
 			return 0;
-		if (c == '<') {
+		if (c == the_currentsource.firstchar) {
 			char *outstr;
-			if (fscanf (f, "div id=\"result-stats\">About %m[0-9,] results", &outstr) == 1) {
+			if (fscanf (f, the_currentsource.fmat, &outstr) == 1) {
 				fclose (f);
 				thecnt_t out = the_atothecnt_ignore (outstr);
 				free (outstr);
@@ -132,6 +157,10 @@ void the_thetostr (the_t the, char *buf, size_t maxlen) {
 	snprintf (buf, maxlen, "%Lf %s%c", unit.the, unit.name, (unit.the == 1) ? '\0' : 's');
 }
 
+void the_setsource (struct the_source *source) {
+	the_currentsource = *source;
+	the_thes = the_getcnt ("the");
+}
 
 void the_init (void) {
 	curl_global_init (CURL_GLOBAL_ALL);
@@ -139,17 +168,27 @@ void the_init (void) {
 	
 	curl_easy_setopt (curl, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0");
 	
-	the_thes = the_getcnt ("the");
+	//the_setsource (&the_source_google);
 }
 
-
+void print_thes (const char *name, const char *term) {
+	char buf [512];
+	the_t the = the_getthe (term);
+	the_thetostr (the, buf, 512);
+	printf ("%s: %s (%.20Lf thes)\n", name, buf, the);
+}
 
 void main (int argc, char **argv) {
 	the_init ();
 	
-	//while (1);
-	char buf [512];
-	the_t the = the_getthe (argv [1]);
-	the_thetostr (the, buf, 512);
-	printf ("%s (%.20Lf thes)\n", buf, the);
+	printf ("thes found for term \"%s\"\n", argv [1]);
+	
+	the_setsource (&the_source_bing);
+	print_thes ("bing", argv [1]);
+	
+	the_setsource (&the_source_google);
+	print_thes ("google", argv [1]);
+	
+	the_setsource (&the_source_wikipedia);
+	print_thes ("wikipedia", argv [1]);
 }
