@@ -1,6 +1,5 @@
 #include <curl/curl.h>
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
 CURL *curl;
 
@@ -95,6 +94,12 @@ the_t the_inunit (the_t the, the_t unit) {
 struct the_unit the_getthe_unit (the_t thes) {
 	struct the_unit out;
 	
+	if (thes == 0) {
+		out.the = 0;
+		out.name = "the";
+		return out;
+	}
+	
 	the_t inunit = the_inunit (thes, the_units [0].the);
 	if (inunit <= 1) {
 		out.the = inunit;
@@ -144,6 +149,7 @@ void main (int argc, char **argv) {
 	
 	//while (1);
 	char buf [512];
-	the_thetostr (the_getthe (argv [1]), buf, 512);
-	printf ("%s\n", buf);
+	the_t the = the_getthe (argv [1]);
+	the_thetostr (the, buf, 512);
+	printf ("%s (%.20Lf thes)\n", buf, the);
 }
