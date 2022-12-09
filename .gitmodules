@@ -1,0 +1,3 @@
+[submodule "libthe"]
+	path = libthe
+	url = https://github.com/aouwt/libthe.git

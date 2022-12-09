@@ -1,15 +1,16 @@
 #include "irc.h"
 #include "kb.h"
+#include "libthe/inc/libthe.h"
+
+#define NO_INSULTING_INSULTS
 
 
-
-/*
 KB_DEFMESSAGELIST (Joining,
 	"howdy howdy howdy",
 	"wazzup NERDS",
 	"hello",
 	"howdy",
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (Confirmation,
 	"okie",
@@ -22,7 +23,7 @@ KB_DEFMESSAGELIST (Confirmation,
 	"working on it",
 	"ok ok ok ok",
 	"whatever you want, asshole",
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (Leaving,
 	"see ya, suckers",
@@ -31,8 +32,8 @@ KB_DEFMESSAGELIST (Leaving,
 	"bye",
 //	"*disappears into nothingness*",
 //	"*vanishes into thin air*",
-	KB_KeymashFmt ("my final word: %s"),
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("my final word: %s"),
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (Error,
 	"you absolute fool",
@@ -47,13 +48,13 @@ KB_DEFMESSAGELIST (Error,
 		"bee you",
 		"oh bees",
 	#endif
-	KB_KeymashFmt ("there was an error: %s")
+	KB_CONST_KEYMASH ("there was an error: %s")
 );
 KB_DEFMESSAGELIST (NoSuchFact,
 	"what the fuck is that",
 	"huh...?",
 	"idk what that is",
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (InsufficientPerms,
 	"haha loser, you think you can make me do that?",
@@ -63,7 +64,7 @@ KB_DEFMESSAGELIST (InsufficientPerms,
 	"no.",
 	"i dont wanna",
 	"shut up",
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (Insult,
 	"shut the fuck up",
@@ -78,12 +79,12 @@ KB_DEFMESSAGELIST (Insult,
 //	"ok kit",
 	"why dont you shut up before you make a fool of yourself, okay?",
 	"why",
-	"ive got a ton of insults i could use against you, but i dont know which one to pick..."
+	"ive got a ton of insults i could use against you, but i dont know which one to pick...",
 	"youre so lonely that im almost inclined to feel sorry for you, but then i remember how much of a loser you are",
 	"your face is a face ive been avoiding for seven years; if i have to see it again, ill break down for sure",	// thx cyan
 	"leave me alone, please",
 	"you are like a beer keg except youre full of useless questions instead of beer",
-	KB_KeymashFmt ("\"%s\" -- what i hear whenever you talk"),
+	KB_CONST_KEYMASH ("\"%s\" -- what i hear whenever you talk"),
 	
 	#ifndef NO_INSULTING_INSULTS
 		"why do you even try to live if youre this much of a failure.",
@@ -107,18 +108,18 @@ KB_DEFMESSAGELIST (Insult,
 		"sussy baka",
 	#endif
 	
-	KB_Keymash ()
+	KB_CONST_KEYMASH ("%s")
 );
 KB_DEFMESSAGELIST (Quotes,
 	"\"you bowl of soup\" -- taswelll",
-	KB_KeymashFmt ("\"%s\" -- kitbot")
+	KB_CONST_KEYMASH ("\"%s\" -- kitbot")
 );
 KB_DEFMESSAGELIST (YourMomJokes,
 	"your mom is so fat, she has more chins than a chinese phonebook",
 	"your mom.",
 	"your mom is so dumb that she decided to raise you.",
 	"ur mom",
-	KB_KeymashFmt ("your mom is so dumb that she %s")
+	KB_CONST_KEYMASH ("your mom is so dumb that she %s")
 );
 KB_DEFMESSAGELIST (BeeFacts,
 	"Bees have 5 eyes (https://honeybeenet.gsfc.nasa.gov/Honeybees/Basics.htm)",
@@ -148,10 +149,13 @@ KB_DEFMESSAGELIST (BeeFacts,
 	"A honey bee visits 50 to 100 flowers during a collection trip. (https://www.benefits-of-honey.com/honey-bee-facts/)",
 	"The bee’s brain is oval in shape and only about the size of a sesame seed (iflscience.com), yet it has remarkable capacity to learn and remember things and is able to make complex calculations on distance travelled and foraging efficiency. (https://www.benefits-of-honey.com/honey-bee-facts/)",
 	"A colony of bees consists of 20,000-60,000 honeybees and one queen. Worker honey bees are female, live for about 6 weeks and do all the work. (https://www.benefits-of-honey.com/honey-bee-facts/)"
-);*/
+);
 
-KB_ON_INIT {}
-KB_ON_CLEANUP {}
+KB_ON_INIT {
+	the_init (&the_source_google);
+}
+KB_ON_CLEANUP {
+}
 
 
 KB_ON_COMMAND (kitping) {
@@ -165,6 +169,10 @@ KB_ON_COMMAND (kitasdf) {
 KB_ON_COMMAND (kitbot) {
 	IRC_Send (&ctx->ch, KB_Keymash ());
 }
+
+KB_ON_COMMAND (kitbeefact) {
+	IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (BeeFacts)));
+}
 /*
 COMMAND (kitjoin) {
 	char *join_ch;
@@ -174,15 +182,26 @@ COMMAND (kitjoin) {
 	IRC_JoinChannelByName (text->chan->conn, join_ch, &newch);
 	IRC_Send (text->chan, KB_RandMessage (KB_MESSAGELIST (Confirmation)));
 	IRC_Send (&newch, KB_RandMessage (KB_MESSAGELIST (Confirmation)));
-}
-
-COMMAND (kitinsult) {
-	IRC_Send (msg->chan, KB_RandMessage (KB_MESSAGELIST (Insult)));
-}
-
-COMMAND (kitbeefact) {
-	IRC_Send (msg->chan, KB_RandMessage (KB_MESSAGELIST (BeeFacts)));
 }*/
+
+KB_ON_COMMAND (kitinsult) {
+	IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Insult)));
+}
+
+KB_ON_COMMAND (kitsay) {
+	IRC_Send (&ctx->ch, msg);
+}
+
+KB_ON_COMMAND (kitthe) {
+	char buf [64];
+	the_t the = the_getthe (msg);
+	if (the == 0) {
+		IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Error)));
+	} else {
+		the_thetostr (the, buf, 64);
+		IRC_SendF (&ctx->ch, "\"%s\" is %s (%.10Lf the(s))", msg, buf, the);
+	}
+}
 
 
 
@@ -193,15 +212,25 @@ KB_COMMANDLIST (
 		kitping
 	},
 	{	"bot",
-		NULL,
-		NULL,
+		"",
+		"",
 		kitbot
-	}/*,
+	},
 	{	"insult",
 		"insults you.",
 		"replies with a random insult",
 		kitinsult
 	},
+	{	"bee",
+		"learn about bees!",
+		"tells you a fact about bees",
+		kitbeefact
+	},
+	{	"the",
+		"libthe frontend",
+		"print the *the* measurement of a given word or phrase. see https://github.com/aouwt/libthe for more details",
+		kitthe
+	},/*
 	{	"join",
 		"joins an IRC channel",
 		"joins a channel. channels are presented in the format #<channel>[@<server>]. if no server is provided, it is assumed that the server is the one that has sent the command. based on configuration options, this command might only be sent by channel ops.",
@@ -226,12 +255,12 @@ KB_COMMANDLIST (
 		"disconnects from an irc server",
 		"disconnects from the irc server supplied. if no server is specified, it leaves the server that has sent the command. based on configuration options, this command might only be sent by channel ops.",
 		kitdie
-	},
+	},*/
 	{	"say",
 		"says something",
 		"says whatever follows the command",
 		kitsay
-	},
+	}/*,
 	{	"asdf",
 		KB_Keymash (),
 		KB_Keymash (),

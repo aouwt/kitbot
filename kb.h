@@ -8,8 +8,9 @@
 	#define KB_ON_INIT	void _KB_C_Init (void)
 	#define KB_ON_CLEANUP	void _KB_C_Cleanup (void)
 
-	#define KB_DEFMESSAGELIST(name, ...)	char *_KB_MsgList_ # name [] = { __VA_ARGS__, NULL };
-	#define KB_MESSAGELIST(name)	(_KB_MsgList_ # name)
+	#define KB_DEFMESSAGELIST(name, ...)	char *_KB_MsgList_ ## name [] = { __VA_ARGS__, NULL };
+	#define KB_MESSAGELIST(name)	(_KB_MsgList_ ## name)
+	#define KB_CONST_KEYMASH(fmt)	"!km" fmt
 	
 	struct KB_Command {
 		const char *name;

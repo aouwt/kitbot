@@ -14,10 +14,9 @@ int main (void) {
 	IRC_SetNick (conn, "kitbot");
 	
 	IRC_JoinChannelByName (conn, "b");
+	IRC_JoinChannelByName (conn, "a");
 	
-	static IRC_Message msg;
-	strcpy (msg.ch.chan_name, "b");
-	msg.ch.conn = conn;
+	_KB_C_Init ();
 	
 	while (1) {
 		IRC_Message msg;
@@ -28,7 +27,8 @@ int main (void) {
 				begin += 3;
 				char cmd [16] = { '\0' };
 				bool cont = true;
-				for (size_t i = 0; cont; i ++) {
+				size_t i = 0;
+				for (; cont; i ++) {
 					switch (begin [i]) {
 						case ' ': case '\0':
 							cont = false;
@@ -42,7 +42,7 @@ int main (void) {
 					}
 				}
 				
-				KB_CallCmd (cmd, begin, &msg);
+				KB_CallCmd (cmd, begin + i, &msg);
 			}
 		}
 		usleep (100);

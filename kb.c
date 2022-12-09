@@ -45,11 +45,20 @@ char *KB_KeymashFmt (const char *fmt) {
 	return out;
 }
 
+const char *KB_String (const char *str) {
+	if (strncmp (str, "!km", 3) == 0)
+		return KB_KeymashFmt (str + 3);
+	else
+		return str;
+}
+
 const char *KB_RandMessage (const char **msgs) {
 	size_t i;
 	for (i = 0; msgs [i] != NULL; i ++);
 	
-	return msgs [(size_t) (rand () * ((float) i / (float) RAND_MAX))];
+	size_t m = ((float) rand () / (float) RAND_MAX) * (float) i;
+	
+	return KB_String (msgs [m]);
 }
 
 void KB_CallCmd (const char *cmd, const char *msg, IRC_Message *ctx) {
