@@ -203,6 +203,12 @@ KB_ON_COMMAND (kitthe) {
 	}
 }
 
+KB_ON_COMMAND (kithelp) {
+	IRC_Send (&ctx->ch, "kitbot: dumbest bot in the universe");
+	for (size_t i = 0; _KB_C_List [i].run != NULL;  i ++) {
+		IRC_SendF (&ctx->ch, "kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].desc);
+	}
+}
 
 
 KB_COMMANDLIST (
@@ -212,8 +218,8 @@ KB_COMMANDLIST (
 		kitping
 	},
 	{	"bot",
-		"",
-		"",
+		NULL,
+		NULL,
 		kitbot
 	},
 	{	"insult",
@@ -260,15 +266,15 @@ KB_COMMANDLIST (
 		"says something",
 		"says whatever follows the command",
 		kitsay
-	}/*,
+	},/*,
 	{	"asdf",
 		KB_Keymash (),
 		KB_Keymash (),
 		kitasdf
-	}
+	},*/
 	{	"help",
 		"prints a help message",
 		"prints a list of commands, if no argument is supplied. if an argument is supplied, it prints a more detailed explanation on the command given. the prefix included in the command is optional.",
 		kithelp
-	}*/
+	}
 );
