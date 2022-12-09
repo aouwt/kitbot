@@ -1,4 +1,3 @@
-#include "irc.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -13,6 +12,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+
+#include "queue.h"
+#include "irc.h"
+
+
+
 #define	FMT_VA \
 	char msg [512];	\
 	va_list ap;	\
@@ -20,48 +25,59 @@
 	vsnprintf (msg, 512, fmt, ap);	\
 	va_end (ap);
 
+
 void IRC_Poll (IRC_Connection *conn) {
-	size_t oldbufsz = conn->buf.bufend - conn->buf.buf;
-	
 	while (1) {
-		size_t cursz = conn->buf.bufend - conn->buf.buf;
-		if (conn->buf.bufend + 16 >= (conn->buf.alloc + conn->buf.buf)) {
-			conn->buf.buf = realloc (conn->buf.buf, (conn->buf.alloc *= 2));
-			conn->buf.bufend = conn->buf.buf + cursz;
-			
-		}
+		char buf [512];
+		ssize_t r = read (conn->sockfd, buf, sizeof (buf) - 1);
 		
-		ssize_t r = read (
-			conn->sockfd,
-			conn->buf.bufend,
-			(sizeof (char) * (conn->buf.alloc - cursz)) - 2
-		);
-		
-		if (r > 0)
-			conn->buf.bufend += r;
-		else
+		if (r > 0) {
+			buf [r] = '\0';
+			printf (">%s", buf);
+			Queue_Push_Bulk (&conn->queue, buf);
+		} else
 			break;
 	}
-	
-	*conn->buf.bufend = '\0';
-	if (conn->buf.bufend != oldbufsz + conn->buf.buf)
-		printf (">%s", conn->buf.buf + oldbufsz);
 }
 
 IRC_Command *IRC_GetCommand (IRC_Connection *conn, IRC_Command *out) {
 	IRC_Poll (conn);
-	char *needle;
 	
-	if ((needle = strstr (conn->buf.buf, "\r\n")) == NULL)
+	if ((conn->queue.push - conn->queue.pop) <= 1)
 		return NULL;
-	
-	*needle = '\0';
+	for (size_t i = 0;;) {
+		char c = Queue_Pop (&conn->queue);
+		
+		if (c == '\0') {
+			while (1) {
+				IRC_Poll (conn);
+				c = Queue_Pop (&conn->queue);
+				if (c != '\0') {
+				//	putchar (c);
+					break;
+				}
+			}
+		}
+		
+		out->msg [i] = c;
+		
+		if (c == '\n') {
+			out->msg [i - 1] = '\0';
+			out->msg [i] = '\r'; 
+			break;
+		}
+		i ++;
+	}
 	
 	out->from = conn;
 	out->argc = 0;
 	
-	out->argv [out->argc ++] = conn->buf.buf;
-	for (char *i = conn->buf.buf; *i != '\n'; i ++) {
+	if (out->msg [0] == ':')
+		out->argv [out->argc ++] = out->msg + 1;
+	else
+		out->argv [out->argc ++] = out->msg;
+	
+	for (char *i = out->msg; *i != '\r'; i ++) {
 		if (*i == ' ') {
 			out->argv [out->argc] = i + 1;
 			*i = '\0';
@@ -91,13 +107,15 @@ IRC_Message *IRC_GetPRIVMSG (IRC_Command *cmd, IRC_Message *out) {
 	if (strcmp (cmd->argv [1], "PRIVMSG") != 0)
 		return NULL;
 	
-	strncpy (out->from.nick, cmd->argv [0], cmd->argv [0] - strchr (cmd->argv [0], '!'));
+	strncpy (out->from.nick, cmd->argv [0], strchr (cmd->argv [0], '!') - cmd->argv [0]);
 	strcpy (out->from.full, cmd->argv [0]);
 	
-	strcpy (out->ch.chan_name, cmd->argv [2]);
+	strcpy (out->ch.chan_name, cmd->argv [2] + 1);
 	out->ch.conn = cmd->from;
 	
 	strcpy (out->msg, cmd->argv [3]);
+	
+	return out;
 }
 
 void sendmesg (IRC_Connection *conn, const char *msg) {
@@ -139,7 +157,7 @@ void IRC_SendF (IRC_Channel *chan, const char *fmt, ...)
 
 
 void IRC_SendToCh (IRC_Connection *conn, const char *chan, const char *msg)
-	{	sendfmtmesg (conn, "PRIVMSG %s :%s", chan, msg);	}
+	{	sendfmtmesg (conn, "PRIVMSG #%s :%s", chan, msg);	}
 	
 void IRC_SendToChF (IRC_Connection *conn, const char *chan, const char *fmt, ...)
 	{	FMT_VA;	IRC_SendToCh (conn, chan, msg);	}
@@ -153,10 +171,10 @@ void IRC_SendCmdF (IRC_Connection *conn, const char *fmt, ...)
 	
 
 void IRC_JoinChannel (IRC_Channel *chan)
-	{	IRC_SendCmdF (chan->conn, "JOIN %s", chan->chan_name);	}
+	{	IRC_SendCmdF (chan->conn, "JOIN #%s", chan->chan_name);	}
 	
-void /*IRC_Channel **/IRC_JoinChannelByName (IRC_Connection *conn, const char *chan)
-	{	IRC_SendCmdF (conn, "JOIN %s", chan);	}
+void /*IRC_Channel */IRC_JoinChannelByName (IRC_Connection *conn, const char *chan)
+	{	IRC_SendCmdF (conn, "JOIN #%s", chan);	}
 
 
 
@@ -169,15 +187,13 @@ IRC_Connection *IRC_AllocConnection (const char *domain, unsigned int port) {
 	out->sockfd = -1;
 	out->domain = strdup (domain);
 	out->port = port;
-	out->buf.buf = malloc (16 * sizeof (char));
-	out->buf.bufend = out->buf.buf;
-	out->buf.alloc = 16;
+	out->queue = Queue_New (512);
 	
 	return out;
 }
 
 void IRC_FreeConnection (IRC_Connection *conn) {
-	free (conn->buf.buf);
+	Queue_Destroy (&conn->queue);
 	free (conn);
 }
 
@@ -195,8 +211,12 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 		if (conn->sockfd == -1)
 			return NULL;
 		
+	//	printf ("%i\n", errno);
+		
 		if (fcntl (conn->sockfd, F_SETFL, O_NONBLOCK))
 			return NULL;
+		
+	//	printf ("%i\n", errno);
 		
 		((struct sockaddr_in*) ai->ai_addr)->sin_port = htons (conn->port);
 		
@@ -208,9 +228,11 @@ IRC_Connection *IRC_OpenConnection (IRC_Connection *conn) {
 					cont = true;
 				break;
 				case EALREADY:
+				case EISCONN:
 					cont = false;
 				break;
 				default:
+					printf ("%i\n", errno);
 					return NULL;
 				break;
 			}

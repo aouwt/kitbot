@@ -3,6 +3,8 @@
 	
 	#include <stddef.h>
 	
+	#include "queue.h"
+	
 	struct _IRC_UserModes;
 	struct _IRC_ChannelModes;
 	struct _IRC_User;
@@ -14,7 +16,7 @@
 		struct _IRC_Connection *from;
 		unsigned int argc;
 		char *argv [16];
-		char *msg [510];
+		char msg [510];
 	} IRC_Command;
 
 	typedef struct _IRC_UserModes {
@@ -56,12 +58,7 @@
 		
 		//const char *motd;
 		
-		struct {
-			size_t alloc;
-			char *bufend;
-			char *buf;
-		} buf;
-		
+		Queue queue;
 	} IRC_Connection;
 
 

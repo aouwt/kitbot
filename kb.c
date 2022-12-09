@@ -4,6 +4,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "irc.h"
+#include "kb.h"
+
 char *KB_Keymash (void) {
 	const char samples [] =
 		"fkdasjgfdklajfoiajeglkdgjmeriaojfkmglkjfalkjfdlfjisadkgjeriosdfjkjgerm"
@@ -47,4 +50,16 @@ const char *KB_RandMessage (const char **msgs) {
 	for (i = 0; msgs [i] != NULL; i ++);
 	
 	return msgs [(size_t) (rand () * ((float) i / (float) RAND_MAX))];
+}
+
+void KB_CallCmd (const char *cmd, const char *msg, IRC_Message *ctx) {
+	if (msg == NULL)
+		msg = ctx->msg;
+	
+	for (struct KB_Command *i = _KB_C_List; i->run != NULL; i ++) {
+		if (strcmp (cmd, i->name) == 0) {
+			(*i->run) (msg, ctx);
+			return;
+		}
+	}
 }
