@@ -1,39 +1,67 @@
+#define NO_INSULTING_INSULTS
+
+#include <string.h>
+#include <stdio.h>
+
 #include <irc.h>
 #include <kb.h>
 #include <libthe.h>
-
-#include <string.h>
-
 #include <msg.h>
 #include <facts.h>
 
-#define NO_INSULTING_INSULTS
-
+#define SEND(msg) IRC_Send (&ctx->ch, msg)
+#define SENDF(fmt, ...) IRC_SendF (&ctx->ch, fmt, __VA_ARGS__)
+#define RANDMSG(name) SEND (KB_RandMessage (KB_MESSAGELIST (name)))
 
 char *cursource;
+FILE *todo;
 
 KB_ON_INIT {
 	the_init (&the_source_google);
 	cursource = "google";
+	todo = fopen ("todo.txt", "a");
 }
 KB_ON_CLEANUP {
+	fclose (todo);
+	the_deinit ();
 }
 
 
 KB_ON_COMMAND (kitping) {
-	IRC_Send (&ctx->ch, "kitpong");
+	SEND ("kitpong");
 }
 
 KB_ON_COMMAND (kitasdf) {
-	IRC_Send (&ctx->ch, KB_Keymash ());
+	SEND (KB_Keymash ());
 }
 
 KB_ON_COMMAND (kitbot) {
-	IRC_Send (&ctx->ch, KB_Keymash ());
+	SEND (KB_Keymash ());
 }
 
-KB_ON_COMMAND (kitbeefact) {
-	IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Fact_Bees)));
+KB_ON_COMMAND (kitfact) {
+	const char **facts;
+	const char *name;
+	
+	if (strncasecmp (msg, "bee", 3) == 0) {
+		name = "bees";
+		facts = KB_MESSAGELIST (Fact_Bees);
+	} else
+	if (strncasecmp (msg, "kit", 3) == 0) {
+		name = "kit";
+		facts = KB_MESSAGELIST (Fact_Kit);
+	} else {
+		RANDMSG (NoSuchFact);
+		return;
+	}
+	
+	SENDF ("fun fact about %s: %s", name, KB_RandMessage (facts));
+}
+
+KB_ON_COMMAND (kittodo) {
+	fprintf (todo, " - %s\n", msg);
+	fflush (todo);
+	RANDMSG (Confirmation);
 }
 /*
 COMMAND (kitjoin) {
@@ -47,7 +75,7 @@ COMMAND (kitjoin) {
 }*/
 
 KB_ON_COMMAND (kitinsult) {
-	IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Insult)));
+	RANDMSG (Insult);
 }
 
 KB_ON_COMMAND (kitsay) {
@@ -67,11 +95,11 @@ KB_ON_COMMAND (kitthe_source) {
 		the_setsource (&the_source_bing);
 		cursource = "bing";
 	} else {
-		IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Error)));
+		RANDMSG (Error);
 		return;
 	}
 	
-	IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Confirmation)));
+	RANDMSG (Confirmation);
 }
 
 KB_ON_COMMAND (kitthe) {
@@ -79,19 +107,19 @@ KB_ON_COMMAND (kitthe) {
 	the_t the = the_getthe (msg);
 	if (the == 0) {
 		if (strcmp (cursource, "bing") == 0)
-			IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (BingErr)));
+			RANDMSG (BingErr);
 		else
-			IRC_Send (&ctx->ch, KB_RandMessage (KB_MESSAGELIST (Error)));
+			RANDMSG (Error);
 	} else {
 		the_thetostr (the, buf, 64);
-		IRC_SendF (&ctx->ch, "according to %s, \"%s\" is %s (%.10Lf the(s))", cursource, msg, buf, the);
+		SENDF ("according to %s, \"%s\" is %s (%.10Lf the(s))", cursource, msg, buf, the);
 	}
 }
 
 KB_ON_COMMAND (kithelp) {
-	IRC_Send (&ctx->ch, "kitbot: dumbest bot in the universe");
+	SEND ("kitbot: dumbest bot in the universe");
 	for (size_t i = 0; _KB_C_List [i].run != NULL;  i ++) {
-		IRC_SendF (&ctx->ch, "kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].desc);
+		SENDF ("kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].desc);
 	}
 }
 
@@ -112,10 +140,10 @@ KB_COMMANDLIST (
 		"replies with a random insult",
 		kitinsult
 	},
-	{	"bee",
-		"learn about bees!",
-		"tells you a fact about bees",
-		kitbeefact
+	{	"fact",
+		"fun facts",
+		"tells you a fun fact about the given topic. valid topics are bees, kit.",
+		kitfact
 	},
 	{	"the",
 		"libthe frontend",
@@ -127,45 +155,19 @@ KB_COMMANDLIST (
 		"sets the source for libthe. can be wikipedia, google, or bing.",
 		kitthe_source
 	},
-	/*
-	{	"join",
-		"joins an IRC channel",
-		"joins a channel. channels are presented in the format #<channel>[@<server>]. if no server is provided, it is assumed that the server is the one that has sent the command. based on configuration options, this command might only be sent by channel ops.",
-		kitjoin
-	},
-	{	"sql",
-		"execute raw sql queries",
-		"executes a raw sql query to a sqlite3 database",
-		kitsql
-	},
-	{	"connect",
-		"connect to irc server",
-		"connects to an irc server, provided as the rest of the command. based on configuration options, this command might only be sent by channel ops.",
-		kitconnect
-	},
-	{	"leave",
-		"leaves an irc channel",
-		"leaves the irc channel supplied. channels are in the format #<channel>[@<server>]. if no server is provided, it is assumed that the server is the one that has sent the command. based on configuration options, this command might only be sent by channel ops."
-		kitleave
-	},
-	{	"die",
-		"disconnects from an irc server",
-		"disconnects from the irc server supplied. if no server is specified, it leaves the server that has sent the command. based on configuration options, this command might only be sent by channel ops.",
-		kitdie
-	},*/
 	{	"say",
 		"says something",
 		"says whatever follows the command",
 		kitsay
-	},/*,
-	{	"asdf",
-		KB_Keymash (),
-		KB_Keymash (),
-		kitasdf
-	},*/
+	},
 	{	"help",
 		"prints a help message",
 		"prints a list of commands, if no argument is supplied. if an argument is supplied, it prints a more detailed explanation on the command given. the prefix included in the command is optional.",
 		kithelp
+	},
+	{	"todo",
+		"adds to the todo list",
+		"adds the thing you say to the \"todo\" list -- a list stored on the host's computer of things, well, to do.",
+		kittodo
 	}
 );

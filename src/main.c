@@ -1,26 +1,40 @@
 #define _GNU_SOURCE
 
-#include <irc.h>
-#include <kb.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdlib.h>
+
+#include <irc.h>
+#include <kb.h>
 
 
 int main (void) {
-	IRC_Connection *conn = IRC_NewConnection (NULL, "ubq323.website", 0, "kitbot");
-	IRC_SetNick (conn, "kitbot");
-	
-	IRC_JoinChannelByName (conn, "b");
-	IRC_JoinChannelByName (conn, "a");
+	srand (time (NULL));
+	{
+		IRC_Connection *conn = KB_EstablishConnection ("ubq323.website");
+		IRC_JoinChannelByName (conn, "b");
+		IRC_JoinChannelByName (conn, "a");
+	}
+	{
+		IRC_Connection *conn = KB_EstablishConnection ("localhost");
+		IRC_JoinChannelByName (conn, "b");
+	}
 	
 	_KB_C_Init ();
 	
+	size_t cid = 0;
 	while (1) {
+		cid = ++ cid % (KB_ConnectionsCnt + 1);
+		IRC_Connection *conn = KB_Connections [cid];
+		
 		IRC_Message msg;
+		
 		if (IRC_GetMessage (conn, &msg) != NULL) {
+		
 			char *begin = strcasestr (msg.msg, "kit");
 			
 			if (begin != NULL) {

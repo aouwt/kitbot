@@ -21,6 +21,11 @@
 		void (*run) (const char *msg, IRC_Message *ctx);
 	};
 	
+	extern IRC_Connection **KB_Connections;
+	extern size_t KB_ConnectionsCnt;
+
+	extern IRC_Connection *KB_EstablishConnection (const char *server);
+	
 	extern char *KB_Keymash (void);	// generates "fkhdasjkdfajkfhl" or something similar
 	extern char *KB_KeymashFmt (const char *fmt);	// does stuff i think
 	

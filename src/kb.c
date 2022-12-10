@@ -3,9 +3,26 @@
 #include <stddef.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include <irc.h>
 #include <kb.h>
+
+
+IRC_Connection **KB_Connections = NULL;
+size_t KB_ConnectionsCnt = -1;
+
+
+IRC_Connection *KB_EstablishConnection (const char *server) {
+	IRC_Connection *c = IRC_NewConnection (NULL, server, 0, "kitbot");
+	if (c != NULL) {
+		KB_Connections = realloc (KB_Connections, sizeof (IRC_Connection *) * (++ KB_ConnectionsCnt + 1));
+		KB_Connections [KB_ConnectionsCnt] = c;
+		IRC_SetNick (c, "kitbot");
+		return c;
+	} else
+		return NULL;
+}
 
 char *KB_Keymash (void) {
 	const char samples [] =
