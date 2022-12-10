@@ -1,6 +1,8 @@
 #ifndef KB_H
 	#define KB_H
 	
+	#include <stddef.h>
+	#include <irc.h>
 	
 	#define KB_COMMANDLIST(...)	struct KB_Command _KB_C_List [] = { __VA_ARGS__, { NULL, NULL, NULL, NULL }};
 
@@ -8,8 +10,8 @@
 	#define KB_ON_INIT	void _KB_C_Init (void)
 	#define KB_ON_CLEANUP	void _KB_C_Cleanup (void)
 
-	#define KB_DEFMESSAGELIST(name, ...)	char *_KB_MsgList_ ## name [] = { __VA_ARGS__, NULL };
-	#define KB_MESSAGELIST(name)	(_KB_MsgList_ ## name)
+	#define KB_DEFMESSAGELIST(name, ...)	const char *_KB_MsgList_ ## name [] = { __VA_ARGS__, NULL };
+	#define KB_MESSAGELIST(name)	_KB_MsgList_ ## name
 	#define KB_CONST_KEYMASH(fmt)	"!km" fmt
 	
 	struct KB_Command {

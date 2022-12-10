@@ -3,7 +3,7 @@
 	
 	#include <stddef.h>
 	
-	#include "queue.h"
+	#include <queue.h>
 	
 	struct _IRC_UserModes;
 	struct _IRC_ChannelModes;

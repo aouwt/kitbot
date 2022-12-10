@@ -4,8 +4,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "irc.h"
-#include "kb.h"
+#include <irc.h>
+#include <kb.h>
 
 char *KB_Keymash (void) {
 	const char samples [] =

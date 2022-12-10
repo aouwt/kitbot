@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 
-#include "irc.h"
-#include "kb.h"
+#include <irc.h>
+#include <kb.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>

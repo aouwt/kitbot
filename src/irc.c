@@ -13,8 +13,8 @@
 #include <unistd.h>
 
 
-#include "queue.h"
-#include "irc.h"
+#include <queue.h>
+#include <irc.h>
 
 
 
