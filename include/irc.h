@@ -16,7 +16,7 @@
 		struct _IRC_Connection *from;
 		unsigned int argc;
 		char *argv [16];
-		char msg [510];
+		char msg [512];
 	} IRC_Command;
 
 	typedef struct _IRC_UserModes {
@@ -43,7 +43,7 @@
 	} IRC_Channel;
 
 	typedef struct _IRC_Message {
-		char msg [500];
+		char msg [512];
 		struct _IRC_User from;
 		struct _IRC_Channel ch;
 	} IRC_Message;

@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <irc.h>
 #include <kb.h>
@@ -9,10 +10,12 @@
 #include <msg.h>
 #include <facts.h>
 
-#define SEND(msg) IRC_Send (&ctx->ch, msg)
-#define SENDF(fmt, ...) IRC_SendF (&ctx->ch, fmt, __VA_ARGS__)
-#define RANDMSG(name) SEND (KB_RandMessage (KB_MESSAGELIST (name)))
+#define SEND(msg)	IRC_Send (&ctx->ch, msg)
+#define SENDF(fmt, ...)	IRC_SendF (&ctx->ch, fmt, __VA_ARGS__)
+#define RANDMSG(name)	SEND (KB_RandMessage (KB_MESSAGELIST (name)))
 
+#define USES_ARG	char *_last = msg;
+#define GETARG	KB_PullArg (&_last);
 char *cursource;
 FILE *todo;
 
@@ -82,29 +85,107 @@ KB_ON_COMMAND (kitsay) {
 	IRC_Send (&ctx->ch, msg);
 }
 
-KB_ON_COMMAND (kitthe_source) {
-	if (strcasecmp (msg, "wikipedia") == 0) {
+/*
+#define KITSET_KEYFUNC(name, adminreq)	\
+	const bool _kitset_admin ## name = adminreq;	\
+	const char *_kitset_keyfunc ## name (char *_last)
+
+#define KITSET_KEYVAL(name)	_kitset_key ## name
+
+#define KITSET_BOOLIF(arg, tf)	\
+	tf ? ( \
+		strcasecmp (arg, "yes") ||	\
+		strcasecmp (arg, "y") ||	\
+		strcasecmp (arg, "true") ||	\
+		strcasecmp (arg, "t") ||	\
+		strcasecmp (arg, "on") ||	\
+		strcasecmp (arg, "1")	\
+	) : (	\
+		strcasecmp (arg, "no") ||	\
+		strcasecmp (arg, "n") ||	\
+		strcasecmp (arg, "false") ||	\
+		strcasecmp (arg, "f") ||	\
+		strcasecmp (arg, "off") ||	\
+		strcasecmp (arg, "0")	\
+	)
+KITSET_KEYFUNC (false, the_source) {
+	char *arg = GETARG;
+	if (strcasecmp (arg, "wikipedia") == 0) {
 		the_setsource (&the_source_wikipedia);
-		cursource = "wikipedia";
+		return "wikipedia";
 	} else
-	if (strcasecmp (msg, "google") == 0) {
+	if (strcasecmp (arg, "google") == 0) {
 		the_setsource (&the_source_google);
-		cursource = "google";
+		return "google";
 	} else
-	if (strcasecmp (msg, "bing") == 0) {
+	if (strcasecmp (arg, "bing") == 0) {
 		the_setsource (&the_source_bing);
-		cursource = "bing";
+		return "bing";
 	} else {
 		RANDMSG (Error);
-		return;
+		return NULL;
 	}
-	
-	RANDMSG (Confirmation);
 }
 
-KB_ON_COMMAND (kitthe) {
+#define SETBOOLIF(what)	\
+	char *arg = GETARG;	\
+	if (KITSET_BOOLIF (arg, true)) {	\
+		what = true;	\
+		return "true";	\
+	} else	\
+	if (KITSET_BOOLIF (arg, false)) {	\
+		what = false;	\
+		return "false";	\
+	} else {	\
+		return NULL;	\
+	}
+	
+KITSET_KEYFUNC (true, insult_offensive)
+	{ SETBOOLIF (kitinsult_offensive); }
+
+KITSET_KEYFUNC (true, insult_bees)
+	{ SETBOOLIF (kitinsult_bees); }
+
+#define KITSET_KEY(name)	{ _kitset_keyfunc ## name, _kitset_admin ## name, NULL, # name }
+KB_ON_COMMAND (kitset) { USES_ARG;
+	const struct {
+		const char *name;
+		const char *set;
+		bool admin;
+		char (*func) (char *);
+	} keys [] = {
+		KITSET_KEY (libthe_source),
+		{ NULL, false, NULL, NULL }
+	};
+	
+	
+	char *key = GETARG;
+	if (strcasecmp (key, "list") == 0) {
+		for (size_t i = 0; keys [i].func != NULL; i ++) {
+			SENDF ("%c%s = %s", keys [i].admin ? '!' : '\0', keys [i].name, keys [i].set);
+		}
+		return;
+	}
+	RANDMSG (Confirmation);
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+KB_ON_COMMAND (kitthe) { USES_ARG;
+	
 	char buf [64];
-	the_t the = the_getthe (msg);
+	char *term = GETARG;
+	the_t the = the_getthe (term);
 	if (the == 0) {
 		if (strcmp (cursource, "bing") == 0)
 			RANDMSG (BingErr);
@@ -112,15 +193,32 @@ KB_ON_COMMAND (kitthe) {
 			RANDMSG (Error);
 	} else {
 		the_thetostr (the, buf, 64);
-		SENDF ("according to %s, \"%s\" is %s (%.10Lf the(s))", cursource, msg, buf, the);
+		SENDF ("according to %s, \"%s\" is %s (%.10Lf the(s))", cursource, term, buf, the);
 	}
 }
 
-KB_ON_COMMAND (kithelp) {
-	SEND ("kitbot: dumbest bot in the universe");
-	for (size_t i = 0; _KB_C_List [i].run != NULL;  i ++) {
-		SENDF ("kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].desc);
+KB_ON_COMMAND (kithelp) { USES_ARG;
+	char *arg = GETARG;
+	if (arg == NULL) {
+		SEND ("kitbot: dumbest bot in the universe");
+		for (size_t i = 0; _KB_C_List [i].run != NULL; i ++) {
+			SENDF ("kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].desc);
+		}
+	} else {
+		for (size_t i = 0; _KB_C_List [i].run != NULL; i ++) {
+			if (strcasecmp (arg, _KB_C_List [i].name) == 0) {
+				SENDF ("kit%s: %s", _KB_C_List [i].name, _KB_C_List [i].help);
+				return;
+			}
+		}
 	}
+}
+
+KB_ON_COMMAND (kitadmin) { //USES_ARG;
+	if (strcmp (ctx->from.full, "kit!~Thunderbird@localhost") == 0) {
+		KB_EstablishConnection (msg);
+	} else
+		RANDMSG (InsufficientPerms);
 }
 
 
@@ -150,11 +248,11 @@ KB_COMMANDLIST (
 		"print the *the* measurement of a given word or phrase. see https://github.com/aouwt/libthe for more details",
 		kitthe
 	},
-	{	"the_source",
+	/*{	"the_source",
 		"sets source for kitthe",
 		"sets the source for libthe. can be wikipedia, google, or bing.",
 		kitthe_source
-	},
+	},*/
 	{	"say",
 		"says something",
 		"says whatever follows the command",

@@ -78,7 +78,7 @@ const char *KB_RandMessage (const char **msgs) {
 	return KB_String (msgs [m]);
 }
 
-void KB_CallCmd (const char *cmd, const char *msg, IRC_Message *ctx) {
+void KB_CallCmd (const char *cmd, char *msg, IRC_Message *ctx) {
 	if (msg == NULL)
 		msg = ctx->msg;
 	
@@ -88,4 +88,40 @@ void KB_CallCmd (const char *cmd, const char *msg, IRC_Message *ctx) {
 			return;
 		}
 	}
+}
+
+char *KB_PullArg (char **last) {
+	char *begin = *last;
+	bool q = false;
+	
+	if (*last == NULL)
+		return NULL;
+	
+	for (;; (*last) ++) {
+		switch (**last) {
+			case '\0':
+				goto end;
+			break;
+			
+			case '"':
+				if (q)
+					goto end;
+				else
+					begin ++;
+				
+				q = !q;
+			break;
+			
+			case ' ':
+				if (!q)
+					goto end;
+			break;
+		}
+	}
+end:
+	if (**last == '\0')
+		*last = NULL;
+	else
+		**last = '\0';
+	return begin;
 }
