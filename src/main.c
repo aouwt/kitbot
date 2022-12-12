@@ -19,10 +19,10 @@ int main (void) {
 		IRC_JoinChannelByName (conn, "b");
 		IRC_JoinChannelByName (conn, "a");
 	}
-	{
+	/*{
 		IRC_Connection *conn = KB_EstablishConnection ("localhost");
 		IRC_JoinChannelByName (conn, "b");
-	}
+	}*/
 	
 	_KB_C_Init ();
 	

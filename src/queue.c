@@ -6,7 +6,7 @@
 
 
 
-char Queue_Pop (Queue *q) {
+const char Queue_Pop (Queue *q) {
 	for (size_t i = 0; i < q->initialized; i ++) {
 		if (q->items [i].i == q->pop) {
 			q->items [i].i = 0;
@@ -14,8 +14,11 @@ char Queue_Pop (Queue *q) {
 			return q->items [i].c;
 		}
 	}
-	
 	return '\0';
+}
+
+const char Queue_Peek (Queue *q) {
+	return Queue_Get (q, q->pop);
 }
 
 /*void Queue_Cleanup (Queue *q) {
@@ -29,6 +32,23 @@ char Queue_Pop (Queue *q) {
 	Queue_Destroy (q);
 	*q = new;
 }*/
+const char Queue_Get (Queue *q, size_t id) {
+	for (size_t i = 0; i < q->initialized; i ++) {
+		if (q->items [i].i == id)
+			return q->items [i].c; 
+	}
+	return '\0';
+}
+
+size_t Queue_Find (Queue *q, const char c) {
+	for (size_t i = 0; i < q->initialized; i ++) {
+		if (q->items [i].i != 0) {
+			if (q->items [i].c == c)
+				return q->items [i].i;
+		}
+	}
+	return 0;
+}
 
 
 void Queue_Push (Queue *q, const char c) {

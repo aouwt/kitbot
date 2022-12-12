@@ -16,10 +16,14 @@
 		struct _Queue_Item *items;
 	} Queue;
 	
-	extern char Queue_Pop (Queue *q);
+	extern const char Queue_Pop (Queue *q);
 	extern void Queue_Push (Queue *q, const char c);
 	extern void Queue_Push_Bulk (Queue *q, const char *str);
 	
 	extern Queue Queue_New (size_t initial_sz);
 	extern void Queue_Destroy (Queue *q);
+	
+	size_t Queue_Find (Queue *q, const char c);
+	const char Queue_Get (Queue *q, size_t id);
+	const char Queue_Peek (Queue *q);
 #endif

@@ -33,7 +33,7 @@ void IRC_Poll (IRC_Connection *conn) {
 		
 		if (r > 0) {
 			buf [r] = '\0';
-			printf (">%s", buf);
+		//	printf (">%s", buf);
 			Queue_Push_Bulk (&conn->queue, buf);
 		} else
 			break;
@@ -43,57 +43,62 @@ void IRC_Poll (IRC_Connection *conn) {
 IRC_Command *IRC_GetCommand (IRC_Connection *conn, IRC_Command *out) {
 	IRC_Poll (conn);
 	
-	if ((conn->queue.push - conn->queue.pop) <= 1)
-		return NULL;
-	for (size_t i = 0;;) {
-		char c = Queue_Pop (&conn->queue);
+	if (Queue_Get (&conn->queue, Queue_Find (&conn->queue, '\r') + 1) == '\n') {	// has a \r followed by a \n (get id of \r and +1 == \n)
+		printf (">");
+		for (size_t i = 0;; i ++) {
+			char c = Queue_Pop (&conn->queue);
+			putchar (c);
+			switch (c) {
+				case '\r':
+					if (Queue_Peek (&conn->queue) == '\n') {
+						Queue_Pop (&conn->queue);	// remove \n from buffer
+						out->msg [i] = '\0';
+						goto parsecmd;
+					}
+				break;
+				
+				case '\0':
+					fputs ("IRC internal error! This should never happen, please submit a bug report! (GetCommand:1)", stderr);
+					exit (1);
+				break;
+				
+				default:
+					out->msg [i] = c;
+				break;
+			}
+		}
 		
-		if (c == '\0') {
-			while (1) {
-				IRC_Poll (conn);
-				c = Queue_Pop (&conn->queue);
-				if (c != '\0') {
-				//	putchar (c);
-					break;
+		
+parsecmd:
+		putchar ('\n');
+		out->from = conn;
+		out->argc = 0;
+		
+		if (out->msg [0] == ':')
+			out->argv [out->argc ++] = out->msg + 1;
+		else
+			out->argv [out->argc ++] = out->msg;
+		
+		for (char *i = out->msg; *i != '\0'; i ++) {
+			if (*i == ' ') {
+				out->argv [out->argc ++] = i + 1;
+				*i = '\0';
+				
+				if (*(i + 1) == ':') {	// if next prefixed with :
+					*out->argv [out->argc - 1] = i + 1;	// -1 because we already incremented it
+					goto endparse;
 				}
 			}
 		}
 		
-		out->msg [i] = c;
+endparse:
+		out->argv [out->argc] = '\0';
+		if (strcmp (out->argv [0], "PING") == 0)
+			IRC_SendCmdF (conn, "PONG :%s", out->argv [1] + 1);
 		
-		if (c == '\n') {
-			out->msg [i - 1] = '\0';
-			out->msg [i] = '\r'; 
-			break;
-		}
-		i ++;
-	}
-	
-	out->from = conn;
-	out->argc = 0;
-	
-	if (out->msg [0] == ':')
-		out->argv [out->argc ++] = out->msg + 1;
-	else
-		out->argv [out->argc ++] = out->msg;
-	
-	for (char *i = out->msg; *i != '\r'; i ++) {
-		if (*i == ' ') {
-			out->argv [out->argc] = i + 1;
-			*i = '\0';
-			
-			if (*(i + 1) == ':') {
-				*(out->argv [out->argc] ++) = '\0';
-				break;
-			}
-			out->argc ++;
-		}
-	}
-	
-	if (strcmp (out->argv [0], "PING") == 0)
-		IRC_SendCmdF (conn, "PONG :%s", out->argv [1] + 1);
-	
-	return out;
+		return out;
+	} else
+		return NULL;
 }
 
 IRC_Message *IRC_GetMessage (IRC_Connection *conn, IRC_Message *out) {

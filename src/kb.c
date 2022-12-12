@@ -94,7 +94,7 @@ char *KB_PullArg (char **last) {
 	char *begin = *last;
 	bool q = false;
 	
-	if (*last == NULL)
+	if (**last == NULL)
 		return NULL;
 	
 	for (;; (*last) ++) {
@@ -119,6 +119,7 @@ char *KB_PullArg (char **last) {
 		}
 	}
 end:
+	puts (begin);
 	if (**last == '\0')
 		*last = NULL;
 	else
